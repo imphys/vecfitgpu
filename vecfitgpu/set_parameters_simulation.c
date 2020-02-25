@@ -1,110 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "paramsdata.h"
+#include "FFT/fft.h"
+
 #include <string.h>
-#include <assert.h>
 #include <math.h>
 #include <complex.h>
-//#include "set_parameters_simulation.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-typedef struct paramsdata{
-    int flg_parallel;
-    int flg_writemat;
-    int flg_showplot;
-    int flg_showconv;
-    int flg_gpu;
-    int K;
-    int Ncfg;
-    int xemit;
-    int yemit;
-    int zemit;
-    int Npupil;
-    int pixelsize;
-    int Mx;
-    int My;
-    int Mz;
-    int xrange;
-    int yrange;
-    int numparams;
-    int Nitermax;
-    int fwd;
-    int depth;
-    int lambda;
-    int lambdacentral;
-    int aberrationcorrected;
-    int ringradius;
-    int doelevels;
-    int doephasedepth;
-    int readnoisestd;
-    int readnoisevariance;
-    int cztN;
-    int cztM;
-    int cztL;
-    int debugmode;
-    int phtrue;
-    int bgtrue;
-    int varfit;
+void prechirpz(int xsize, int qsize, int N, int M, double _Complex *A, double _Complex *B, double _Complex *D);
 
-    float azim;
-    float m;
-    float alpha;
-    float tollim;
-    float NA;
-    float refmed;
-    float refcov;
-    float refimm;
-    float refimmnom;
-    float pola;
-    float welldepth;
-    float g2;
-
-    float * aberrationsoffset;
-    float phi[1000];
-    float theta[1000];
-    float allalpha[1000];
-    float Duxstr[1000];
-    float Duystr[1000];
-
-
-    char fitmodel[50];
-    char excitation[30];
-    char ztype[50];
-    char dipoletype[50];
-    char doetype[50];
-
-    int zrange[2];
-    int zspread[2];
-    int lambdaspread[2];
-    int aberrations[9][3];
-    int *zonefunction;
-}paramsdata;
-
-void get_pupil_matrix(paramsdata *params)
+int max(int num1, int num2)
 {
-//This function calculates the pupil matrix Q_{jk}, which gives the j-th
-//electric field component proportional to the k-th dipole vector
-//component.
-
-//parameters: NA, refractive indices of medium, cover slip, immersion fluid,
-//wavelength (in nm), sampling in pupil
-
-double NA = params -> NA;
-double refmed = params -> refmed;
-double refcov = params -> refcov;
-double refimm = params -> refimm;
-double refimmnom = params -> refimmnom;
-double lambda = params -> lambda;
-double Npupil = params -> Npupil;
-
-//pupil radius (in diffraction units) and pupil coordinate sampling
-double PupilSize = 1.0;
-double DxyPupil = 2*PupilSize/Npupil;
-double XYPupil = -PupilSize+DxyPupil/2:DxyPupil:PupilSize;
-
-//[YPupil,XPupil] = meshgrid(XYPupil,XYPupil);
-
+    return (num1 > num2 ) ? num1 : num2;
 }
-
-
 
 void set_parameters_simulation(paramsdata *params){
     params->K = 1;
@@ -198,8 +106,11 @@ void set_parameters_simulation(paramsdata *params){
     //params.Mx = size(allPSFs,1);
     //params.My = size(allPSFs,2);
     params->Mz = 1;
-    //params->xrange = params.pixelsize*params.Mx/2;
-    //params.yrange = params.pixelsize*params.My/2;
+    params->My = 10;
+    params->Mx = 10;
+
+    params->xrange = params->pixelsize * params->Mx/2;
+    params->yrange = params->pixelsize * params->My/2;
 
 
     //excitation pattern
@@ -220,7 +131,7 @@ void set_parameters_simulation(paramsdata *params){
     {
         zcheck = params->depth+params->zemit;
     }
-    if(!strcmp(params->ztype,'medium'))
+    if(!strcmp(params->ztype,"medium"))
     {
         zmin = params->zrange[0];
         zcheck = zmin+params->depth+params->zemit;
@@ -234,17 +145,17 @@ void set_parameters_simulation(paramsdata *params){
     //sanity check on refractive index values
     if (params->NA > params->refimm)
     {
-        printf('Warning! Refractive index immersion medium cannot be smaller than NA.\n');
+        printf("Warning! Refractive index immersion medium cannot be smaller than NA.\n" );
     }
     if(params->NA > params->refcov)
     {
-        printf('Warning! Refractive index cover slip cannot be smaller than NA.\n');
+        printf("Warning! Refractive index cover slip cannot be smaller than NA.\n");
     }
 
     //parameters needed for fixed dipole PSF only: emitter/absorber dipole
     //orientation (characterized by angles pola and azim)
-    strcpy(params->dipoletype, 'diffusion');
-    printf("%s", params->dipoletype);
+    strcpy(params->dipoletype, "diffusion");
+    //printf("%s", params->dipoletype);
     //strcpy(params->dipoletype, 'free');
     //strcpy(params->dipoletype, 'fixed');
     params->pola = 90.0*M_PI/180;
@@ -253,11 +164,10 @@ void set_parameters_simulation(paramsdata *params){
 
     //diffusion coefficient
 
-    float g2;
-    float eps = 2.2204e-16;
-    printf("%f", eps);
+    double g2;
+    double eps = 2.2204e-16;
 
-    float welldepth = 1/eps;
+    double welldepth = 1/eps;
     g2 = (3 + pow(welldepth, 2) - 3 * welldepth * (cosh(welldepth)/sinh(welldepth)))/pow(welldepth, 2); //coth(welldepth) replaced by cosh/sinh
     params->welldepth = welldepth;
     params->g2 = g2;
@@ -272,47 +182,80 @@ void set_parameters_simulation(paramsdata *params){
         for(int j = 0; j<3; j++)
         {
             params->aberrations[i][j] = 0;
+            params->zonefunction[i][j] = 0;
         }
     }
 
     //params->aberrationsoffset = [];
     params->aberrations[3][1] = -1;
+    params->zonefunction[3][1] = -1;
+
     params->aberrations[4][1] = 1;
+    params->zonefunction[4][1] = 1;
+
     params->aberrations[0][0] = 2;
+    params->zonefunction[0][0] = 2;
+
     params->aberrations[1][0] = 2;
+    params->zonefunction[1][0] = 2;
+
     params->aberrations[2][0] = 2;
+    params->zonefunction[2][0] = 2;
+
     params->aberrations[1][1] = -2;
+    params->zonefunction[1][1] = -2;
+
     params->aberrations[2][1] = 2;
+    params->zonefunction[2][1] = 2;
+
     params->aberrations[8][1] = -2;
+    params->zonefunction[8][1] = -2;
+
     params->aberrations[3][0] = 3;
+    params->zonefunction[3][0] = 3;
+
     params->aberrations[4][0] = 3;
+    params->zonefunction[4][0] = 3;
+
     params->aberrations[6][0] = 3;
+    params->zonefunction[6][0] = 3;
+
     params->aberrations[7][0] = 3;
+    params->zonefunction[7][0] = 3;
+
     params->aberrations[6][1] = -3;
+    params->zonefunction[6][1] = -3;
+
     params->aberrations[7][1] = 3;
+    params->zonefunction[7][1] = 3;
+
     params->aberrations[5][0] = 4;
+    params->zonefunction[5][0] = 4;
+
     params->aberrations[8][0] = 4;
+    params->zonefunction[8][0] = 4;
 
     for(int i = 0; i<9; i++)
     {
         params->aberrations[i][2] = params->aberrations[i][2]*params->lambdacentral;
+        params->zonefunction[i][2] = params->aberrations[i][2]*params->lambdacentral;
+    }
 
-    }
-    for(int i = 0; i<9;i++)
-    {
-        for(int j = 0; j<3; j++)
-        {
-            printf("%d\t", params->aberrations[i][j]);
-        }
-        printf("\n");
-    }
+    // for(int i = 0; i<9;i++)
+    // {
+    //     for(int j = 0; j<3; j++)
+    //     {
+    //         printf("%d\t", params->aberrations[i][j]);
+    //     }
+    //     printf("\n");
+    // }
 
     //DOE/SLM
     //strcpy(params->doetype, 'none');
-    strcpy(params->doetype, 'vortex');
+    strcpy(params->doetype, "vortex");
     params->ringradius = 1;
     params->doelevels = 32;
-    params->zonefunction = params->aberrations;
+    //params->zonefunction = params->aberrations;
     params->doephasedepth = 1*params->lambdacentral;
 
     //Fit model parameters: signal photon count, background photons/pixel, read
@@ -324,8 +267,8 @@ void set_parameters_simulation(paramsdata *params){
 
     //calculate auxiliary vectors for chirpz
     int Kx, Ky;
-    float PupilSize, ImageSizex, ImageSizey;
-    float Ax, Ay, Bx, By, Dx, Dy;
+    double PupilSize, ImageSizex, ImageSizey;
+    //double Ax, Ay, Bx, By, Dx, Dy;
 
 
     Kx = params->Mx;
@@ -334,16 +277,35 @@ void set_parameters_simulation(paramsdata *params){
     ImageSizex = params->xrange*params->NA/params->lambda;
     ImageSizey = params->yrange*params->NA/params->lambda;
 
-    //[Ax,Bx,Dx] = prechirpz(PupilSize, ImageSizex, params->Npupil, Kx);
-    //[Ay,By,Dy] = prechirpz(PupilSize, ImageSizey, params->Npupil, Ky);
+
+    double _Complex *Ax, *Bx, *Dx;
+    double _Complex *Ay, *By, *Dy;
+    int Lx, Ly;
+
+    Lx = params->Npupil + Kx - 1;
+    Ly = params->Npupil + Ky - 1;
+
+    Ax = (double _Complex*) calloc(params->Npupil, sizeof(double _Complex));
+    Bx = (double _Complex*) calloc(Kx, sizeof(double _Complex));
+    Dx = (double _Complex*) calloc(Lx, sizeof(double _Complex));
+
+
+    prechirpz(PupilSize, ImageSizex, params->Npupil, Kx, Ax, Bx, Dx);
+
+    Ay = (double _Complex*) calloc(params->Npupil, sizeof(double _Complex));
+    By = (double _Complex*) calloc(Ky, sizeof(double _Complex));
+    Dy = (double _Complex*) calloc(Ly, sizeof(double _Complex));
+
+
+    prechirpz(PupilSize, ImageSizey, params->Npupil, Ky, Ay, By, Dy);
 
 }
 
-float prechirpz(xsize, qsize, N, M)
+void prechirpz(int xsize, int qsize, int N, int M, double _Complex *A, double _Complex *B, double _Complex *D)
 {
     int L;
-    float sigma;
-    float _Complex Afac, Bfac, Gfac, sqW, W;
+    double sigma;
+    double _Complex Afac, Bfac, Gfac, sqW, W;
     L = N + M - 1;
     sigma = 2 * M_PI * xsize * qsize / N / M;
     Afac = cexpf(2 * _Complex_I * sigma * (1 - M));
@@ -352,15 +314,15 @@ float prechirpz(xsize, qsize, N, M)
     W = sqW * sqW;
     Gfac = (2*xsize/N)*cexpf(_Complex_I * sigma * (1-N) * (1-M));
 
-    float _Complex *Utmp, *Vtmp, *A, *B, *D;
+    double _Complex *Utmp, *Vtmp;
 
-    Utmp = (float _Complex*) calloc(N, sizeof(float _Complex));
-    A = (float _Complex*) calloc(N, sizeof(float _Complex));
+    Utmp = (double _Complex*) calloc(N, sizeof(double _Complex));
+    //A = (double _Complex*) calloc(N, sizeof(double _Complex));
 
     A[0] = 1.0;
     Utmp[0] = sqW * Afac;
     for(int i = 1; i < N; i++)
-    {
+    {https://www.google.com/search?client=ubuntu&channel=fs&q=what+colour+is+infrared+light&ie=utf-8&oe=utf-8
         A[i] = Utmp[i-1]*A[i-1];
         Utmp[i] = Utmp[i-1]*W;
     }
@@ -368,9 +330,8 @@ float prechirpz(xsize, qsize, N, M)
 
     free(Utmp);
 
-
-    Utmp = (float _Complex*) calloc(M, sizeof(float _Complex));
-    B = (float _Complex*) calloc(M, sizeof(float _Complex));
+    Utmp = (double _Complex*) calloc(M, sizeof(double _Complex));
+    //B = (double _Complex*) calloc(M, sizeof(double _Complex));
     Utmp[0] = sqW * Bfac;
     B[0] = Gfac;
 
@@ -386,8 +347,8 @@ float prechirpz(xsize, qsize, N, M)
 
     int size = max(N,M)+1;
 
-    Utmp = (float _Complex*) calloc(size, sizeof(float _Complex));
-    Vtmp = (float _Complex*) calloc(size, sizeof(float _Complex));
+    Utmp = (double _Complex*) calloc(size, sizeof(double _Complex));
+    Vtmp = (double _Complex*) calloc(size, sizeof(double _Complex));
     Utmp[0] = sqW;
     Vtmp[0] = 1.0;
     for(int i = 1; i < size; i++)
@@ -396,32 +357,38 @@ float prechirpz(xsize, qsize, N, M)
         Utmp[i] = Utmp[i-1]*W;
     }
 
-    D = (float _Complex*) calloc(L, sizeof(float _Complex));
+    //D = (double _Complex*) calloc(L, sizeof(double _Complex));
 
     for(int i = 0; i < M; i++ )
     {
         D[i] = conj(Vtmp[i]);
-
     }
 
-    for(int i = 0; i < N)
+    for(int i = 0; i < N; i++)
     {
-        D[L+1-i] = conj(Vtmp[i+1]);
+        D[L-1-i] = conj(Vtmp[i+1]);
     }
 
-}
 
-int max(int num1, int num2)
-{
-    return (num1 > num2 ) ? num1 : num2;
-}
+    double *Dreal, *Dimag;
+
+    Dreal = (double *)malloc(L * sizeof(double));
+    Dimag = (double *)malloc(L * sizeof(double));
+
+    for(int i = 0; i < L; i++)
+    {
+      Dreal[i] = creal(D[i]);
+      Dimag[i] = cimag(D[i]);
+    }
+
+
+    Fft_transform(Dreal, Dimag, L);
+
+    for(int i = 0; i < L; i++)
+    {
+      D[i] = Dreal[i] + (Dimag[i] * _Complex_I);
+    }
 
 
 
-
-int main()
-{
-    paramsdata *params = (paramsdata*)malloc(sizeof(paramsdata));
-    set_parameters_simulation(params);
-    return 0;
 }
