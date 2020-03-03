@@ -68,4 +68,7 @@ typedef struct paramsdata{
     int lambdaspread[2];
     int aberrations[9][3];
     int zonefunction[9][3];
+
+    double _Complex **Axmt, **Bxmt, **Dxmt;
+    double _Complex **Aymt, **Bymt, **Dymt;
 }paramsdata;

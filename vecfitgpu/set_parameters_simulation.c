@@ -7,6 +7,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+double _Complex ** repmat(double _Complex *src, int size_src, int N, int r)
+{
+
+  double _Complex **dst;
+  if(r==1)
+  {
+    dst =(double _Complex **) malloc(N * sizeof(double _Complex*));
+
+    for(int i = 0; i < N;i++ )
+    {
+      dst[i] = (double _Complex *)malloc(size_src * sizeof(double _Complex));
+    }
+
+    for(int i = 0; i < N;i++ )
+    {
+      for(int j = 0; j < size_src; j++)
+      {
+        dst[i][j] = src[j];
+      }
+
+    }
+  }
+  else
+  {
+      printf("r is Larger than 1 in repmat\n");
+  }
+  return dst;
+}
+
 void prechirpz(int xsize, int qsize, int N, int M, double _Complex *A, double _Complex *B, double _Complex *D);
 
 int max(int num1, int num2)
@@ -111,6 +140,7 @@ void set_parameters_simulation(paramsdata *params){
 
     params->xrange = params->pixelsize * params->Mx/2;
     params->yrange = params->pixelsize * params->My/2;
+
 
 
     //excitation pattern
@@ -298,6 +328,21 @@ void set_parameters_simulation(paramsdata *params){
 
 
     prechirpz(PupilSize, ImageSizey, params->Npupil, Ky, Ay, By, Dy);
+
+    double _Complex **Axmt = repmat(Ax, params->Npupil, params->Mx, 1);
+    double _Complex **Bxmt = repmat(Bx, Kx, params->Mx, 1);
+    double _Complex **Dxmt = repmat(Dx, Lx, params->Mx, 1);
+
+    double _Complex **Aymt = repmat(Ay, params->Npupil, params->Npupil, 1);
+    double _Complex **Bymt = repmat(By, Ky, params->Npupil, 1);
+    double _Complex **Dymt = repmat(Dy, Ly, params->Npupil, 1);
+
+    params->cztN = params -> Npupil;
+    params->cztM = params -> Mx;
+    params->cztL = params -> Npupil + params -> Mx - 1;
+
+
+    params->debugmode = 0;
 
 }
 
