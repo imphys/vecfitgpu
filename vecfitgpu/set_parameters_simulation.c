@@ -1,5 +1,6 @@
 #include "paramsdata.h"
 #include "FFT/fft.h"
+#include "get_allPSFs.h"
 
 #include <string.h>
 #include <math.h>
@@ -48,6 +49,14 @@ void set_parameters_simulation(paramsdata *params){
     params->m = 0.95;
     params->alpha = 3.141592653589793;
 
+
+    //params.Mx = size(allPSFs,1);
+    //params.My = size(allPSFs,2);
+    //params -> allPSFs =
+    get_PSFs(&params->allPSFs, params);
+    params->pixelsize = 80;
+    params->xrange = params->pixelsize * params->Mx/2;
+    params->yrange = params->pixelsize * params->My/2;
     //params.Ncfg = size(allPSFs,3)/K;
     //params.allPSFs = allPSFs;
     //params.allalpha = allalpha;
@@ -131,15 +140,11 @@ void set_parameters_simulation(paramsdata *params){
     params->yemit = 0.0;
     params->zemit = 0;
     params->Npupil = 32;
-    params->pixelsize = 80;
-    //params.Mx = size(allPSFs,1);
-    //params.My = size(allPSFs,2);
-    params->Mz = 1;
-    params->My = 10;
-    params->Mx = 10;
 
-    params->xrange = params->pixelsize * params->Mx/2;
-    params->yrange = params->pixelsize * params->My/2;
+
+    params->Mz = 1;
+
+
 
 
 

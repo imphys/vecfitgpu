@@ -71,4 +71,6 @@ typedef struct paramsdata{
 
     double _Complex **Axmt, **Bxmt, **Dxmt;
     double _Complex **Aymt, **Bymt, **Dymt;
+
+    int ***allPSFs;
 }paramsdata;
