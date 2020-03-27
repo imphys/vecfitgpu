@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 double *** meshgrid(double *x, int size_x, double *y, int size_y)
 {
@@ -43,7 +44,7 @@ double *** meshgrid(double *x, int size_x, double *y, int size_y)
 
 void get_pupil_matrix(paramsdata *params)
 {
-//This function calculates the puXYpupil_sizepil matrix Q_{jk}, which gives the j-th
+//This function calculates the puXYPupil_sizepil matrix Q_{jk}, which gives the j-th
 //electric field component proportional to the k-th dipole vector
 //component.
 
@@ -60,58 +61,58 @@ double Npupil = params -> Npupil;
 
 //pupil radius (in diffraction units) and pupil coordinate sampling
 double PupilSize = 1.0;
-double DxyPupil = 2*PupilSize/Npupil;
+double DxYPupil = 2*PupilSize/Npupil;
 
 double *XYPupil;
 
 
-int XYpupil_size = 0;
-double stop = -PupilSize+DxyPupil/2;
+int XYPupil_size = 0;
+double stop = -PupilSize+DxYPupil/2;
 
 while(stop <= PupilSize)
 {
-  XYpupil_size += 1;
-  stop += DxyPupil;
+  XYPupil_size += 1;
+  stop += DxYPupil;
 
 }
 
-XYPupil = (double *) malloc(XYpupil_size * sizeof(double));
+XYPupil = (double *) malloc(XYPupil_size * sizeof(double));
 
-stop = -PupilSize+DxyPupil/2;
+stop = -PupilSize+DxYPupil/2;
 
-for(int i = 0; i< XYpupil_size; i++)
+for(int i = 0; i< XYPupil_size; i++)
 {
   XYPupil[i] = stop;
-  stop += DxyPupil;
+  stop += DxYPupil;
 }
-double ***res, **Ypupil, **Xpupil;
+double ***res, **YPupil, **XPupil;
 
-res = meshgrid(XYPupil, XYpupil_size, XYPupil, XYpupil_size);
-
-
-Ypupil = res[0];
-Xpupil = res[1];
+res = meshgrid(XYPupil, XYPupil_size, XYPupil, XYPupil_size);
 
 
-double _Complex CosThetaMed[XYpupil_size][XYpupil_size], CosThetaCov[XYpupil_size][XYpupil_size], CosThetaImm[XYpupil_size][XYpupil_size], CosThetaImmnom[XYpupil_size][XYpupil_size];
-double _Complex FresnelPmedcov[XYpupil_size][XYpupil_size], FresnelSmedcov[XYpupil_size][XYpupil_size], FresnelPcovimm[XYpupil_size][XYpupil_size], FresnelScovimm[XYpupil_size][XYpupil_size];
-double _Complex FresnelP[XYpupil_size][XYpupil_size], FresnelS[XYpupil_size][XYpupil_size];
+YPupil = res[0];
+XPupil = res[1];
 
-double Phi[XYpupil_size][XYpupil_size], CosPhi[XYpupil_size][XYpupil_size], SinPhi[XYpupil_size][XYpupil_size];
-double _Complex CosTheta[XYpupil_size][XYpupil_size];
-double SinTheta[XYpupil_size][XYpupil_size];
 
-double _Complex pvec[XYpupil_size][XYpupil_size][3], svec[XYpupil_size][XYpupil_size][3];
+double _Complex CosThetaMed[XYPupil_size][XYPupil_size], CosThetaCov[XYPupil_size][XYPupil_size], CosThetaImm[XYPupil_size][XYPupil_size], CosThetaImmnom[XYPupil_size][XYPupil_size];
+double _Complex FresnelPmedcov[XYPupil_size][XYPupil_size], FresnelSmedcov[XYPupil_size][XYPupil_size], FresnelPcovimm[XYPupil_size][XYPupil_size], FresnelScovimm[XYPupil_size][XYPupil_size];
+double _Complex FresnelP[XYPupil_size][XYPupil_size], FresnelS[XYPupil_size][XYPupil_size];
 
-for(int i = 0; i < XYpupil_size; i++)
+double Phi[XYPupil_size][XYPupil_size], CosPhi[XYPupil_size][XYPupil_size], SinPhi[XYPupil_size][XYPupil_size];
+double _Complex CosTheta[XYPupil_size][XYPupil_size];
+double SinTheta[XYPupil_size][XYPupil_size];
+
+double _Complex pvec[XYPupil_size][XYPupil_size][3], svec[XYPupil_size][XYPupil_size][3];
+
+for(int i = 0; i < XYPupil_size; i++)
 {
-  for(int j = 0; j < XYpupil_size; j++)
+  for(int j = 0; j < XYPupil_size; j++)
   {
 
-    CosThetaMed[i][j] = csqrt(1 - (Xpupil[i][j]*Xpupil[i][j] + Ypupil[i][j]*Ypupil[i][j])*(NA*NA)/(refmed*refmed));
-    CosThetaCov[i][j] = csqrt(1 - (Xpupil[i][j]*Xpupil[i][j] + Ypupil[i][j]*Ypupil[i][j])*(NA*NA)/(refcov*refcov));
-    CosThetaImm[i][j] = csqrt(1 - (Xpupil[i][j]*Xpupil[i][j] + Ypupil[i][j]*Ypupil[i][j])*(NA*NA)/(refimm*refimm));
-    CosThetaImmnom[i][j] = csqrt(1 - (Xpupil[i][j]*Xpupil[i][j] + Ypupil[i][j]*Ypupil[i][j])*(NA*NA)/(refimmnom*refimmnom));
+    CosThetaMed[i][j] = csqrt(1 - (XPupil[i][j]*XPupil[i][j] + YPupil[i][j]*YPupil[i][j])*(NA*NA)/(refmed*refmed));
+    CosThetaCov[i][j] = csqrt(1 - (XPupil[i][j]*XPupil[i][j] + YPupil[i][j]*YPupil[i][j])*(NA*NA)/(refcov*refcov));
+    CosThetaImm[i][j] = csqrt(1 - (XPupil[i][j]*XPupil[i][j] + YPupil[i][j]*YPupil[i][j])*(NA*NA)/(refimm*refimm));
+    CosThetaImmnom[i][j] = csqrt(1 - (XPupil[i][j]*XPupil[i][j] + YPupil[i][j]*YPupil[i][j])*(NA*NA)/(refimmnom*refimmnom));
     FresnelPmedcov[i][j] = 2.0/(refmed*CosThetaCov[i][j] + refcov*CosThetaMed[i][j]);
     FresnelSmedcov[i][j] = 2.0/(refmed*CosThetaMed[i][j] + refcov*CosThetaCov[i][j]);
     FresnelPcovimm[i][j] = 2*refcov*CosThetaCov[i][j]/(refcov*CosThetaImm[i][j]+refimm*CosThetaCov[i][j]);
@@ -120,10 +121,10 @@ for(int i = 0; i < XYpupil_size; i++)
     FresnelS[i][j] = FresnelSmedcov[i][j]*FresnelScovimm[i][j];
 
     //setting of vectorial functions
-    Phi[i][j] = atan2(Ypupil[i][j], Xpupil[i][j]);
+    Phi[i][j] = atan2(YPupil[i][j], XPupil[i][j]);
     CosPhi[i][j] = cos(Phi[i][j]);
     SinPhi[i][j] = sin(Phi[i][j]);
-    CosTheta[i][j] = csqrt(1 - (Xpupil[i][j]*Xpupil[i][j] + Ypupil[i][j]*Ypupil[i][j])*(NA*NA)/(refmed*refmed));
+    CosTheta[i][j] = csqrt(1 - (XPupil[i][j]*XPupil[i][j] + YPupil[i][j]*YPupil[i][j])*(NA*NA)/(refmed*refmed));
     SinTheta[i][j] = csqrt(1 - (CosTheta[i][j]*CosTheta[i][j]));
 
     pvec[i][j][0] = FresnelP[i][j] * CosTheta[i][j] * CosPhi[i][j];
@@ -136,13 +137,13 @@ for(int i = 0; i < XYpupil_size; i++)
 
 }
 
-double _Complex PolarizationVector[XYpupil_size][XYpupil_size][2][3];
+double _Complex PolarizationVector[XYPupil_size][XYPupil_size][2][3];
 
 for(int jtel = 0; jtel<3 ; jtel++)
 {
-  for(int i = 0; i < XYpupil_size; i++)
+  for(int i = 0; i < XYPupil_size; i++)
   {
-    for(int j = 0; j < XYpupil_size; j++)
+    for(int j = 0; j < XYPupil_size; j++)
     {
       PolarizationVector[i][j][1][jtel] = CosPhi[i][j] * pvec[i][j][jtel] - SinPhi[i][j] * svec[i][j][jtel];
       PolarizationVector[i][j][2][jtel] = SinPhi[i][j] * pvec[i][j][jtel] + CosPhi[i][j] * svec[i][j][jtel];
@@ -153,13 +154,13 @@ for(int jtel = 0; jtel<3 ; jtel++)
 }
 
 // definition aperture
-double ApertureMask[XYpupil_size][XYpupil_size], Amplitude[XYpupil_size][XYpupil_size], Waberration[XYpupil_size][XYpupil_size];
+double ApertureMask[XYPupil_size][XYPupil_size], Amplitude[XYPupil_size][XYPupil_size], Waberration[XYPupil_size][XYPupil_size];
 
-for(int i = 0; i < XYpupil_size; i++)
+for(int i = 0; i < XYPupil_size; i++)
 {
-  for(int j = 0; j < XYpupil_size; j++)
+  for(int j = 0; j < XYPupil_size; j++)
   {
-    ApertureMask[i][j] = ((Xpupil[i][j]*Xpupil[i][j] + Ypupil[i][j] * Ypupil[i][j]) < 1.0);
+    ApertureMask[i][j] = ((XPupil[i][j]*XPupil[i][j] + YPupil[i][j] * YPupil[i][j]) < 1.0);
     Amplitude[i][j] = ApertureMask[i][j] * csqrt(CosThetaImm[i][j]);
 
 
@@ -184,26 +185,95 @@ for(int i = 0; i < 9; i++)
   orders[i][1] = params -> aberrations[i][1];
 
 
-
   zernikecoefs[i] = params -> aberrations[i][2];
 
   normfac[i] = sqrt(2*(orders[i][0] + 1)/(1 + (orders[i][1] == 0)));
 
   zernikecoefs[i] = normfac[i] * zernikecoefs[i];
 
-  printf("%lf\n", zernikecoefs[i]);
+  //printf("%lf\n", zernikecoefs[i]);
 }
 
+double ***allzernikes;
 
-get_zernikefunctions(orders, 9, Xpupil,Ypupil, XYpupil_size);
+allzernikes = get_zernikefunctions(orders, 9, XPupil,YPupil, XYPupil_size);
 
-//NO SQUEEZE functin used
+for(int i = 0; i < XYPupil_size; i++)
+{
+  for(int j = 0; j < XYPupil_size; j++)
+  {
+    //numel not used
+    for (int k = 0; k < 9;k++)
+    {
+      Waberration[i][j] = Waberration[i][j] + zernikecoefs[k]*allzernikes[i][j][k];
+    }
+  }
+}
 
+double rho[XYPupil_size][XYPupil_size], zoneindex[XYPupil_size][XYPupil_size], ZoneFunction[XYPupil_size][XYPupil_size];
 
-// allzernikes = get_zernikefunctions(orders,XPupil,YPupil);
-// for j = 1:numel(zernikecoefs)
-//     Waberration = Waberration+zernikecoefs(j)*allzernikes(:,:,j);
-// end
+if((strcmp (params->doetype, "none")))
+{
+  if(!(strcmp (params->doetype, "vortex")))
+  {
+    //int numzones = (sizeof(params->ringradius)/sizeof(params->ringradius[0])) - 1; if params ringradius is a vector use This
+    int numzones = 0;
+    for(int i = 0; i < XYPupil_size; i++)
+    {
+      for(int j = 0; j < XYPupil_size; j++)
+      {
+        rho[i][j] = sqrt((XPupil[i][j] * XPupil[i][j]) + (YPupil[i][j] * YPupil[i][j]));
+        zoneindex[i][j] = 0;
+      }
+    }
+    //Use if numzones => 1
+    // for(int jj = 1; jj <=numzones)
+    // {
+    //   for(int i = 0; i < XYPupil_size; i++)
+    //   {
+    //     for(int j = 0; j < XYPupil_size; j++)
+    //     {
+    //       zoneindex[i][j] = zoneindex[i][j] + jj * (rho[i][j]>params->ringradius[jj-1]) * (rho[i][j] <= params -> ringradius[jj]);
+    //     }
+    //   }
+    // }
+    if(params->doelevels == 0)
+    {
+      for(int i = 0; i < XYPupil_size; i++)
+      {
+        for(int j = 0; j < XYPupil_size; j++)
+        {
+          ZoneFunction[i][j] = (2*zoneindex[i][j]-1) * Phi[i][j]/(2*M_PI)+0.5;
+        }
+      }
+    }
+    else
+    {
+      for(int i = 0; i < XYPupil_size; i++)
+      {
+        for(int j = 0; j < XYPupil_size; j++)
+        {
+          ZoneFunction[i][j] = round((params->doelevels) * ((2*zoneindex[i][j]-1) * Phi[i][j]/(2*M_PI)+0.5))/(params->doelevels);
+        }
+      }
+    }
+  }
+  double DOEaberration[XYPupil_size][XYPupil_size];
+  if(!(strcmp (params->doetype, "vortex")))
+  {
+    for(int i = 0; i < XYPupil_size; i++)
+    {
+      for(int j = 0; j < XYPupil_size; j++)
+      {
+        DOEaberration[i][j] = params->doephasedepth * (ZoneFunction[i][j]-floor(ZoneFunction[i][j]));
+      }
+    }
+  }
+}
 
+///% compute effect of refractive index mismatch, in this function we set NA=refmed
+//when actually NA>refmed, so it is not fully correct for TIRF-conditions
+//zvals = [nominal stage position, free working distance, -image depth from cover slip]
+  get_rimismatchpars(params);
 
 }

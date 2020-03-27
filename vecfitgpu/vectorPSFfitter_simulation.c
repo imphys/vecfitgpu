@@ -18,7 +18,7 @@
 
 //gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c get_allPSFs.c funhelp/get_pupil_matrix.c funhelp/get_zernikefunctions.c FFT/fft.c -lm -g -ltiff
 
-
+//gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c get_allPSFs.c funhelp/get_pupil_matrix.c funhelp/get_zernikefunctions.c funhelp/get_rimismatchpars.c FFT/fft.c -lm -g -ltiff
 
 
 int main()
