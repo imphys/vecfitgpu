@@ -73,4 +73,7 @@ typedef struct paramsdata{
     double _Complex **Aymt, **Bymt, **Dymt;
 
     int ***allPSFs;
+
+    double _Complex *** wavevector, ** wavevectorzmed, ** Waberration, ****PupilMatrix;
+
 }paramsdata;

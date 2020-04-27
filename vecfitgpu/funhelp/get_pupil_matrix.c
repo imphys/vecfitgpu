@@ -139,22 +139,36 @@ for(int i = 0; i < XYPupil_size; i++)
 
 double _Complex PolarizationVector[XYPupil_size][XYPupil_size][2][3];
 
+
+
+
 for(int jtel = 0; jtel<3 ; jtel++)
 {
   for(int i = 0; i < XYPupil_size; i++)
   {
     for(int j = 0; j < XYPupil_size; j++)
     {
-      PolarizationVector[i][j][1][jtel] = CosPhi[i][j] * pvec[i][j][jtel] - SinPhi[i][j] * svec[i][j][jtel];
-      PolarizationVector[i][j][2][jtel] = SinPhi[i][j] * pvec[i][j][jtel] + CosPhi[i][j] * svec[i][j][jtel];
+      PolarizationVector[i][j][0][jtel] = CosPhi[i][j] * pvec[i][j][jtel] - SinPhi[i][j] * svec[i][j][jtel];
+      PolarizationVector[i][j][1][jtel] = SinPhi[i][j] * pvec[i][j][jtel] + CosPhi[i][j] * svec[i][j][jtel];
 
 
     }
   }
 }
 
+
 // definition aperture
-double ApertureMask[XYPupil_size][XYPupil_size], Amplitude[XYPupil_size][XYPupil_size], Waberration[XYPupil_size][XYPupil_size];
+double ApertureMask[XYPupil_size][XYPupil_size], Amplitude[XYPupil_size][XYPupil_size] ;
+double _Complex **Waberration, PhaseFactor[XYPupil_size][XYPupil_size];
+
+
+Waberration = (double _Complex **)malloc(XYPupil_size * sizeof(double _Complex *));
+
+for(int i = 0; i < XYPupil_size; i++)
+{
+  Waberration[i] = (double _Complex *)malloc(XYPupil_size * sizeof(double _Complex ));
+}
+
 
 for(int i = 0; i < XYPupil_size; i++)
 {
@@ -191,7 +205,7 @@ for(int i = 0; i < 9; i++)
 
   zernikecoefs[i] = normfac[i] * zernikecoefs[i];
 
-  //printf("%lf\n", zernikecoefs[i]);
+
 }
 
 double ***allzernikes;
@@ -206,6 +220,7 @@ for(int i = 0; i < XYPupil_size; i++)
     for (int k = 0; k < 9;k++)
     {
       Waberration[i][j] = Waberration[i][j] + zernikecoefs[k]*allzernikes[i][j][k];
+
     }
   }
 }
@@ -266,14 +281,155 @@ if((strcmp (params->doetype, "none")))
       for(int j = 0; j < XYPupil_size; j++)
       {
         DOEaberration[i][j] = params->doephasedepth * (ZoneFunction[i][j]-floor(ZoneFunction[i][j]));
+        Waberration[i][j] = Waberration[i][j] + DOEaberration[i][j];
       }
     }
   }
+
 }
 
 ///% compute effect of refractive index mismatch, in this function we set NA=refmed
 //when actually NA>refmed, so it is not fully correct for TIRF-conditions
 //zvals = [nominal stage position, free working distance, -image depth from cover slip]
-  get_rimismatchpars(params);
+  double * zvals, Wrms;
+
+  zvals = get_rimismatchpars(params);
+
+  for(int i = 0; i < XYPupil_size; i++)
+  {
+    for(int j = 0; j < XYPupil_size; j++)
+    {
+      Waberration[i][j] = Waberration[i][j] + zvals[0]*refimm*CosThetaImm[i][j] - zvals[1]*refimmnom*CosThetaImmnom[i][j] - zvals[2]*refmed*CosThetaMed[i][j];
+      PhaseFactor[i][j] = cexp(2*M_PI*I*Waberration[i][j]/lambda);
+      Waberration[i][j] = Waberration[i][j]*ApertureMask[i][j];
+    }
+  }
+
+double _Complex ****PupilMatrix;
+
+int size_PupilMatrix = Npupil;
+
+PupilMatrix = (double _Complex ****)malloc(size_PupilMatrix * sizeof(double _Complex ***));
+
+for(int i = 0; i < size_PupilMatrix; i++)
+{
+  PupilMatrix[i] = (double _Complex ***)malloc(size_PupilMatrix * sizeof(double _Complex **));
+  for(int j = 0; j < size_PupilMatrix; j++)
+  {
+      PupilMatrix[i][j] = (double _Complex **)malloc(2 * sizeof(double _Complex *));
+      PupilMatrix[i][j][0] = (double _Complex *)malloc(3 * sizeof(double _Complex ));
+      PupilMatrix[i][j][1] = (double _Complex *)malloc(3 * sizeof(double _Complex ));
+  }
+}
+
+
+for(int itel = 0; itel<2; itel++)
+{
+  for(int jtel = 0; jtel<3; jtel++)
+  {
+    for(int i = 0; i < XYPupil_size; i++)
+    {
+      for(int j = 0; j < XYPupil_size; j++)
+      {
+        PupilMatrix[i][j][itel][jtel] = Amplitude[i][j]*PhaseFactor[i][j]*PolarizationVector[i][j][itel][jtel];
+        if(fabs(creal(PupilMatrix[i][j][itel][jtel])) < 1e-15)
+        {
+          double real = creal(PupilMatrix[i][j][itel][jtel]);
+          PupilMatrix[i][j][itel][jtel] = PupilMatrix[i][j][itel][jtel] - real;
+        }
+        if(fabs(cimag(PupilMatrix[i][j][itel][jtel])) < 1e-15)
+        {
+          double real = cimag(PupilMatrix[i][j][itel][jtel]);
+          PupilMatrix[i][j][itel][jtel] = PupilMatrix[i][j][itel][jtel] - I*real;
+        }
+      }
+    }
+  }
+}
+
+// for(int i = 0; i < 32; i++)
+// {
+//   printf("%d\n", i);
+//   for(int j = 0; j < 32; j++)
+//   {
+//     printf("%.19lf + %.15lf\n",creal(PupilMatrix[i][j][0][0]) , cimag(PupilMatrix[i][j][0][0]));
+//   }
+// }
+
+double *r_normalization, normint_free, normint_fixed;
+r_normalization = get_normalization(PupilMatrix, params);
+
+normint_free = r_normalization[0];
+normint_fixed = r_normalization[1];
+
+for(int itel = 0; itel<2; itel++)
+{
+  for(int jtel = 0; jtel < 3; jtel ++)
+  {
+    if(!strcmp(params->dipoletype, "free"))
+    {
+      for(int i = 0; i < size_PupilMatrix; i++)
+      {
+        for(int j = 0; j < size_PupilMatrix; j++)
+        {
+          PupilMatrix[i][j][itel][jtel] = PupilMatrix[i][j][itel][jtel] / sqrt(normint_free);
+        }
+      }
+    }
+    if(!strcmp(params->dipoletype, "fixed"))
+    {
+      for(int i = 0; i < size_PupilMatrix; i++)
+      {
+        for(int j = 0; j < size_PupilMatrix; j++)
+        {
+          PupilMatrix[i][j][itel][jtel] = PupilMatrix[i][j][itel][jtel] / sqrt(normint_fixed);
+        }
+      }
+    }
+
+  }
+}
+
+//calculate wavevector inside immersion fluid and z-component inside medium
+double _Complex *** wavevector, ** wavevectorzmed;
+
+
+wavevector = (double _Complex ***)malloc(XYPupil_size * sizeof(double _Complex **));
+
+for(int i = 0; i < XYPupil_size; i++)
+{
+  wavevector[i] = (double _Complex **)malloc(XYPupil_size * sizeof(double _Complex *));
+  for(int j = 0; j < XYPupil_size; j++)
+  {
+      wavevector[i][j] = (double _Complex *)malloc(3 * sizeof(double _Complex ));
+  }
+}
+
+for(int i = 0; i < XYPupil_size; i++)
+{
+  for(int j = 0; j < XYPupil_size; j++)
+  {
+      wavevector[i][j][0] = (2*M_PI*NA/lambda)*XPupil[i][j];
+      wavevector[i][j][1] = (2*M_PI*NA/lambda)*YPupil[i][j];
+      wavevector[i][j][2] = (2*M_PI*refimm/lambda)*CosThetaImm[i][j];
+  }
+}
+
+
+wavevectorzmed = (double _Complex **)malloc(XYPupil_size * sizeof(double _Complex *));
+
+for(int i = 0; i < XYPupil_size; i++)
+{
+  wavevectorzmed[i] = (double _Complex *)malloc(XYPupil_size * sizeof(double _Complex ));
+  for(int j = 0; j < XYPupil_size; j++)
+  {
+      wavevectorzmed[i][j] = (2*M_PI*refmed/lambda) * CosThetaMed[i][j];
+  }
+}
+
+params -> wavevector = wavevector;
+params -> wavevectorzmed = wavevectorzmed;
+params -> Waberration = Waberration;
+params -> PupilMatrix = PupilMatrix;
 
 }

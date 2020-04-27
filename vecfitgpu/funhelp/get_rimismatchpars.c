@@ -1,11 +1,18 @@
 #include "../paramsdata.h"
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 
-void get_rimismatchpars(paramsdata *parameters)
+double * get_rimismatchpars(paramsdata *parameters)
 {
   double refins[3] = {parameters->refimm, parameters->refimmnom, parameters->refmed};
-  double zvals[3] = {0, parameters->fwd, -parameters->depth};
+
+  double * zvals = (double *) malloc(3 * sizeof(double));;
+
+  zvals[0] = 0;
+  zvals[1] = parameters->fwd;
+  zvals[2] = -parameters->depth;
+
   double NA = parameters->NA;
   //reduce NA in case of TIRF conditions
   if (NA>parameters->refmed)
@@ -62,14 +69,10 @@ void get_rimismatchpars(paramsdata *parameters)
       zvalsratio[jv] = Amat[0][jv]/Amat[1][1];
       for(int kv = 1; kv < K; kv++)
       {
-        Wrmsratio[jv][kv] = Amat[jv][kv] -  Amat[0][jv] * Amat[0][kv]/Amat[0][0];
-        printf("%.20Lf\n",  1000000 * Amat[jv][kv] -  1000000 *Amat[0][jv] * Amat[0][kv]/Amat[0][0]);
+        //printf("%.15Lf - %.15Lf*%.15Lf/%.15Lf\n", Amat[jv][kv], Amat[0][jv],Amat[0][kv],Amat[0][0]);
+        Wrmsratio[jv][kv] = Amat[jv][kv] -  (Amat[0][jv] * Amat[0][kv])/Amat[0][0];
       }
     }
-
-
-
-
   }
   else
   {
@@ -86,16 +89,18 @@ void get_rimismatchpars(paramsdata *parameters)
 
   }
 
+  //double test1 = 4.3021e-16;
+  //printf("%0.20lf\n", test1);
 
-  for(int i = 0; i < K; i++)
-  {
-
-    for(int j = 0; j < K; j++)
-    {
-        printf("%.20Lf\t", Wrmsratio[i][j]);
-    }
-    printf("\n");
-  }
+  // for(int i = 0; i < K; i++)
+  // {
+  //
+  //   for(int j = 0; j < K; j++)
+  //   {
+  //       printf("%.20Lf\t", Wrmsratio[i][j]);
+  //   }
+  //   printf("\n");
+  // }
 
   float Wrms;
   zvals[0] = zvalsratio[1]*zvals[1]+zvalsratio[2]*zvals[2];
@@ -104,11 +109,12 @@ void get_rimismatchpars(paramsdata *parameters)
   Wrms = sqrt(Wrms);
 
 
-  // if(1)
-  // {
-  //   printf("image plane depth from cover slip = %4.0f nm\n",-zvals[2]);
-  //   printf("free working distance = %6.2f mu\n",1e-3*zvals[1]);
-  //   printf("nominal z-stage position = %6.2f mu\n",1e-3*zvals[0]);
-  //   printf("rms aberration due to RI mismatch = %4.1f mlambda\n",1e3*Wrms/parameters->lambda);
-  // }
+  if(1)
+  {
+    printf("image plane depth from cover slip = %4.0f nm\n",-zvals[2]);
+    printf("free working distance = %6.2f mu\n",1e-3*zvals[1]);
+    printf("nominal z-stage position = %6.2f mu\n",1e-3*zvals[0]);
+    printf("rms aberration due to RI mismatch = %4.1f mlambda\n",1e3*Wrms/parameters->lambda);
+  }
+  return zvals;
 }

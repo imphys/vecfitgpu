@@ -10,4 +10,6 @@ void get_pupil_matrix(paramsdata *params);
 
 double *** get_zernikefunctions(double **orders, int size_orders, double **x, double **y, int XYpupil_size);
 
-void get_rimismatchpars(paramsdata *parameters);
+double * get_rimismatchpars(paramsdata *parameters);
+
+double * get_normalization(double _Complex ****PupilMatrix, paramsdata *parameters);
