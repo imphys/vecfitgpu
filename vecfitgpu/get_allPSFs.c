@@ -39,8 +39,8 @@ int** read_data(TIFF* tif, paramsdata *params)
                    int B = (pixel & 0x00FF0000) >> 16;
                    int A = (pixel & 0xFF000000) >> 24;
                    int grey_scale = (R+G+B)/3;
-                   //printf("%d\t", R);
                    raster2D[i][j] = grey_scale;
+									 //printf("%d\t", grey_scale);
                  }
   					//printf("\n");
   				}

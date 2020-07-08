@@ -6,9 +6,9 @@ typedef struct paramsdata{
     int flg_gpu;
     int K;
     int Ncfg;
-    int xemit;
-    int yemit;
-    int zemit;
+    double xemit;
+    double yemit;
+    double zemit;
     int Npupil;
     int pixelsize;
     int Mx;

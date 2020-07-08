@@ -50,9 +50,6 @@ void set_parameters_simulation(paramsdata *params){
     params->alpha = 3.141592653589793;
 
 
-    //params.Mx = size(allPSFs,1);
-    //params.My = size(allPSFs,2);
-    //params -> allPSFs =
     get_PSFs(&params->allPSFs, params);
     params->pixelsize = 80;
     params->xrange = params->pixelsize * params->Mx/2;

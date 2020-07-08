@@ -11,6 +11,7 @@
 
 #include "set_parameters_simulation.h"
 #include "funhelp/get_pupil_matrix.h"
+#include "funhelp/get_stack.h"
 
 //gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c FFT/fft.c -lm -g
 //gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c get_allPSFs.c FFT/fft.c -lm -g -ltiff
@@ -19,6 +20,9 @@
 //gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c get_allPSFs.c funhelp/get_pupil_matrix.c funhelp/get_zernikefunctions.c FFT/fft.c -lm -g -ltiff
 
 //gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c get_allPSFs.c funhelp/get_pupil_matrix.c funhelp/get_zernikefunctions.c funhelp/get_rimismatchpars.c FFT/fft.c -lm -g -ltiff
+
+//gcc -o test vectorPSFfitter_simulation.c set_parameters_simulation.c get_allPSFs.c funhelp/get_pupil_matrix.c funhelp/get_zernikefunctions.c funhelp/get_rimismatchpars.c funhelp/get_normalization.c funhelp/get_stack.c FFT/fft.c -lm -g -ltiff
+
 
 //long double
 int main()
@@ -41,7 +45,19 @@ int main()
 
     int Mx = params->Mx, My = params->My, Ncfg = params->Ncfg;
 
-    double spots[Mx][My][Ncfg];
+
+    int *** spots = (int ***) malloc(Mx * sizeof(int **));
+
+    for(int i = 0; i < Mx; i++)
+    {
+      spots[i] = (int **) malloc(My * sizeof(int *));
+      for(int j = 0; j < Ncfg; j++)
+      {
+        spots[i][j] = (int *) malloc(Ncfg * sizeof(int));
+      }
+    }
+
+
     for(int i = 0; i < Ncfg; i++)
     {
       for(int j = 0; j < My; j++)
@@ -53,11 +69,24 @@ int main()
       }
     }
 
-    
-    spots = 1e12*imnoise(spots*1e-12,'poisson');
-    spots = get_stack(params,spots);
+
+    for (int i = 0; i < Mx; i++)
+    {
+      for (int j = 0; j < Mx; j++)
+      {
+        printf("%d\t", params->allPSFs[0][i][j]);
+      }
+      printf("\n" );
+    }
 
 
+    int **** PSFs;
+    //spots = 1e12*imnoise(spots*1e-12,'poisson');
+    PSFs = get_stack(params, spots);
+
+    //% do MLE fit
+    //%%% initial values
+    thetainit = initialvalues(PSFs,params);
 
     return 0;
 }
