@@ -369,7 +369,7 @@ void prechirpz(int xsize, int qsize, int N, int M, double _Complex *A, double _C
     A[0] = 1.0;
     Utmp[0] = sqW * Afac;
     for(int i = 1; i < N; i++)
-    {https://www.google.com/search?client=ubuntu&channel=fs&q=what+colour+is+infrared+light&ie=utf-8&oe=utf-8
+    {
         A[i] = Utmp[i-1]*A[i-1];
         Utmp[i] = Utmp[i-1]*W;
     }
